@@ -41,7 +41,21 @@ object InMemoryModel extends Model:
     idStore.get(id)
 
   def complete(id: Id): Option[Task] =
-    None
+    val newTask = idStore.get(id).map(task=>{
+       task.copy(State.completedNow)
+    })
+    newTask match
+      case Some(task) => idStore.put(id, task)
+      case None => None
+
+    // idStore.map((taskId, task)=>{
+    //   if(taskId == id) {
+    //     (taskId, newTask)
+    //   } else {
+    //     (taskId, task)
+    //   }
+    // })
+    newTask
 
   def update(id: Id)(f: Task => Task): Option[Task] =
     idStore.updateWith(id)(opt => opt.map(f))
@@ -59,7 +73,15 @@ object InMemoryModel extends Model:
     Tags(List.empty)
 
   def tasks(tag: Tag): Tasks =
-    Tasks(idStore)
+    val allTasks: List[(Id, Task)] = Tasks(idStore).toList
+    val tasksWithIdKey = allTasks.filter((id, task)=>{
+        val taskTags = task.tags.filter(currentTag=>{
+          currentTag == tag
+          })
+          taskTags.size != 0 
+     })
+    Tasks(tasksWithIdKey)
+
 
   def clear(): Unit =
     idStore.clear()
