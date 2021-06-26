@@ -96,28 +96,65 @@ object PersistentModel extends Model:
    */
 
   def create(task: Task): Id =
-    ???
+    val nextId = loadId().next
+    val currentTasks = loadTasks()
+    val item = (nextId, task)
+    val newTasks = Tasks(currentTasks.toMap + item)
+    saveTasks(newTasks)
+    saveId(nextId)
+    nextId
 
   def read(id: Id): Option[Task] =
-    ???
+    val currentTasks = loadTasks()
+    currentTasks.toMap.get(id)
 
   def update(id: Id)(f: Task => Task): Option[Task] =
-    ???
+    val currentTasks = loadTasks()
+    val newTask = currentTasks.toMap
+                              .find((taskId, task)=>taskId == id)
+                              .map((id, task)=>f(task))
+    currentTasks.toMap.map((taskId, task)=>{
+      if(taskId == id) then
+        (taskId, newTask)
+      else
+        (taskId, task)
+    })
+    newTask
+ 
 
   def delete(id: Id): Boolean =
-    ???
+    val currentTasks = loadTasks()
+    val taskShouldBeDeleted = currentTasks.toMap.find((taskId, task)=> taskId == id)
+    val newTasks = Tasks(currentTasks.toMap - id)
+    saveTasks(newTasks)
+    taskShouldBeDeleted match 
+      case Some(task) => true
+      case None => false
 
   def tasks: Tasks =
-    ???
+    loadTasks()
 
   def tasks(tag: Tag): Tasks =
-    ???
+    val currentTasks = loadTasks()
+    val foundTasks = currentTasks.toList.filter((id, task)=>{
+        val taskTags = task.tags.filter(currentTag => currentTag == tag)
+        taskTags.size != 0
+     })
+    Tasks(foundTasks)
+
 
   def complete(id: Id): Option[Task] =
-    ???
+      val currentTasks = loadTasks()
+      val taskTobeCompleted = currentTasks.toList.find((taskId, task) =>taskId == id)
+      val newTask = taskTobeCompleted.map((id, task)=>task.copy(State.completedNow))
+      newTask.map((task=> currentTasks.toMap.updated(id, task)))
+      newTask
 
   def tags: Tags =
-    ???
+      val currentTasks = loadTasks()
+      val allTags = currentTasks.toList.flatMap((id, task)=> task.tags)
+      val uniqTags = allTags.foldLeft(List.empty[Tag])((acc, tag)=>if (acc contains tag) acc else tag :: acc).reverse
+      Tags(uniqTags)
 
   def clear(): Unit =
-    ???
+    saveTasks(Tasks(List.empty))
