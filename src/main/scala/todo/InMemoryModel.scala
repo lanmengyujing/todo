@@ -44,10 +44,9 @@ object InMemoryModel extends Model:
     val newTask = idStore.get(id).map(task=>{
        task.copy(State.completedNow)
     })
-    newTask match
-      case Some(task) => idStore.put(id, task)
-      case None => None
-
+    newTask.map((task)=>{
+      idStore.put(id, task)
+    })
     // idStore.map((taskId, task)=>{
     //   if(taskId == id) {
     //     (taskId, newTask)
@@ -70,7 +69,9 @@ object InMemoryModel extends Model:
     Tasks(idStore)
 
   def tags: Tags =
-    Tags(List.empty)
+      val allTags = Tasks(idStore).toList.flatMap((id, task)=> task.tags)
+      val uniqTags = allTags.foldLeft(List.empty[Tag])((acc, tag)=>if (acc contains tag) acc else tag :: acc).reverse
+      Tags(uniqTags)
 
   def tasks(tag: Tag): Tasks =
     val allTasks: List[(Id, Task)] = Tasks(idStore).toList
